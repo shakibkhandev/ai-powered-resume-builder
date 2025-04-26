@@ -4,9 +4,24 @@ import os
 import uuid
 import google.generativeai as genai
 from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Initialize Flask
 app = Flask(__name__)
+
+
+# Set up limiter
+limiter = Limiter(
+    get_remote_address,  # identifies the client IP
+    app=app,
+    default_limits=["10 per hour"],  # global limit (100 requests per hour)
+
+)
+
+
+
+
 
 # Load environment variables
 load_dotenv()
@@ -29,6 +44,18 @@ def generate_professional_summary(name, role, skills, experience):
     model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(prompt)
     return response.text.strip()
+
+
+@app.route("/limited")
+@limiter.limit("10 per minute")  # custom limit on this route
+def limited_route():
+    return {"message": "You have access to this route."}
+
+@app.route("/open")
+def open_route():
+    return {"message": "This route has no rate limit."}
+
+
 
 @app.route("/")
 def default():
